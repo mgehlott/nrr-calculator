@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { calculateRequiredPerformance, fetchPointsTable } from "./apis";
 import PointTable from "./components/PointTable";
@@ -11,11 +11,16 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState(null);
+  const resultRef = useRef(null);
 
   useEffect(() => {
     getPointsTable();
   }, []);
-
+  useEffect(() => {
+    if (resultRef.current) {
+      resultRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [result]);
   async function getPointsTable() {
     const data = await fetchPointsTable();
     setPointsTable(data);
@@ -54,7 +59,7 @@ function App() {
         />
       </div>
       {result && (
-        <div className="result-card">
+        <div className="result-card" ref={resultRef}>
           <Result result={result} formData={formData} />
         </div>
       )}

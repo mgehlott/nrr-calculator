@@ -19,7 +19,7 @@ const PointTable = ({ pointTable }) => {
             {pointTable &&
               pointTable?.map((team, index) => (
                 <tr key={team.id}>
-                  <td>{team?.position}</td>
+                  <td>{index+1}</td>
                   <td>{team?.team}</td>
                   <td>{team?.matches}</td>
                   <td>{team?.won}</td>

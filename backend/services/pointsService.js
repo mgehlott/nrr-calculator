@@ -9,10 +9,32 @@ function convertOversToNumber(overs) {
   return totalOvers + balls / 6;
 }
 
+function ballsToOversDisplay(totalBalls) {
+  const fullOvers = Math.floor(totalBalls / 6);
+  const balls = totalBalls % 6;
+  return `${fullOvers}.${balls}`;
+}
+
+function oversToBalls(oversString) {
+  oversString = oversString.toString();
+  const [fullOvers, balls] = oversString.split(".").map(Number);
+  if (balls >= 6) {
+    console.error(`Invalid overs format: ${oversString}`);
+    return 0;
+  }
+  return fullOvers * 6 + (balls || 0);
+}
+
 function convertNumberToOvers(number) {
   const totalOvers = Math.floor(number);
   const balls = Math.round((number - totalOvers) * 6);
   return `${totalOvers}.${balls}`;
+}
+
+function toDecimalOvers(totalBalls) {
+  const fullOvers = Math.floor(totalBalls / 6);
+  const balls = totalBalls % 6;
+  return fullOvers + balls / 6;
 }
 
 function calculateNRR(runsFor, oversFor, runsAgainst, oversAgainst) {
@@ -83,28 +105,35 @@ function calculateChaseOvers(
   desiredPosition,
   pointsTable
 ) {
-  const oversInNumber = convertOversToNumber(matchOvers);
+  runsToChase = runsToChase + 1;
+  const totalBalls = oversToBalls(matchOvers);
+  // const oversInNumber = convertOversToNumber(matchOvers);
 
-  const teamOversForNum = convertOversToNumber(teamData.oversFor);
-  const teamOversAgainstNum = convertOversToNumber(teamData.oversAgainst);
-  const oppOversForNum = convertOversToNumber(oppData.oversFor);
-  const oppOversAgainstNum = convertOversToNumber(oppData.oversAgainst);
+  // const teamOversForNum = convertOversToNumber(teamData.oversFor);
+  // const teamOversAgainstNum = convertOversToNumber(teamData.oversAgainst);
+  // const oppOversForNum = convertOversToNumber(oppData.oversFor);
+  // const oppOversAgainstNum = convertOversToNumber(oppData.oversAgainst);
+  const teamForBalls = oversToBalls(teamData.oversFor);
+  const teamAgainstBalls = oversToBalls(teamData.oversAgainst);
+  const oppForBalls = oversToBalls(oppData.oversFor);
+  const oppAgainstBalls = oversToBalls(oppData.oversAgainst);
   // since a team can not be go below its current position as we are always going to win by runs or while chasing
   if (desiredPosition >= teamData.position) {
     return null;
   }
 
-  function simulateChase(chaseOvers) {
+  function simulateChase(chaseBalls) {
     const newRunsFor = teamData.runsFor + runsToChase;
-    const newOversFor = teamOversForNum + chaseOvers;
-    const newRunsAgainst = teamData.runsAgainst + (runsToChase - 1);
-    const newOversAgainst = teamOversAgainstNum + oversInNumber;
-
+    const newOversFor = teamForBalls + chaseBalls;
+    const newRunsAgainst = teamData.runsAgainst + runsToChase-1;
+    const newOversAgainst = teamAgainstBalls + totalBalls;
+    const oversInNumber = convertOversToNumber(ballsToOversDisplay(newOversFor));
+    const oversAgainstNumber = convertOversToNumber(ballsToOversDisplay(newOversAgainst));
     const newNRR = calculateNRR(
       newRunsFor,
-      newOversFor,
+      oversInNumber,
       newRunsAgainst,
-      newOversAgainst
+      oversAgainstNumber
     );
 
     const updatedTeam = {
@@ -114,21 +143,24 @@ function calculateChaseOvers(
       points: teamData.points + 2,
       nrr: newNRR,
       runsFor: newRunsFor,
-      oversFor: newOversFor,
+      oversFor: toDecimalOvers(newOversFor),
       runsAgainst: newRunsAgainst,
-      oversAgainst: newOversAgainst,
+      oversAgainst: toDecimalOvers(newOversAgainst),
     };
 
-    const oppNewRunsFor = oppData.runsFor + (runsToChase - 1);
-    const oppNewOversFor = oppOversForNum + oversInNumber;
+    const oppNewRunsFor = oppData.runsFor + runsToChase;
+    const oppNewOversFor = oppForBalls + totalBalls;
     const oppNewRunsAgainst = oppData.runsAgainst + runsToChase;
-    const oppNewOversAgainst = oppOversAgainstNum + chaseOvers;
+    const oppNewOversAgainst = oppAgainstBalls + chaseBalls;
+
+    const oppOversForNumber = convertOversToNumber(ballsToOversDisplay(oppNewOversFor));
+    const oppOversAgainstNumber = convertOversToNumber(ballsToOversDisplay(oppNewOversAgainst));
 
     const oppNewNRR = calculateNRR(
       oppNewRunsFor,
-      oppNewOversFor,
+      oppOversForNumber,
       oppNewRunsAgainst,
-      oppNewOversAgainst
+      oppOversAgainstNumber
     );
 
     const updatedOpp = {
@@ -137,9 +169,9 @@ function calculateChaseOvers(
       lost: oppData.lost + 1,
       nrr: oppNewNRR,
       runsFor: oppNewRunsFor,
-      oversFor: oppNewOversFor,
+      oversFor: ballsToOversDisplay(oppNewOversFor),
       runsAgainst: oppNewRunsAgainst,
-      oversAgainst: oppNewOversAgainst,
+      oversAgainst: ballsToOversDisplay(oppNewOversAgainst),
     };
 
     const updatedTable = pointsTable.map((t) => {
@@ -156,20 +188,19 @@ function calculateChaseOvers(
 
   // Used binary search since we have monotonic space in both cases
   function findMinOvers() {
-    let low = 0.1;
-    let high = oversInNumber;
+    let low = 1;
+    let high = totalBalls;
     let result = null;
 
-    while (high - low > 0.1) {
-      const mid = Math.round(((low + high) / 2) * 10) / 10;
-
+    while (low <= high) {
+     const mid = Math.floor((low + high) / 2);
       const { newPosition, newNRR } = simulateChase(mid);
 
       if (newPosition <= desiredPosition) {
         result = { chaseOvers: mid, newNRR };
-        high = mid - 0.1;
+        high = mid - 1;
       } else {
-        low = mid + 0.1;
+        low = mid + 1;
       }
     }
 
@@ -178,19 +209,18 @@ function calculateChaseOvers(
 
   function findMaxOvers() {
     let low = 0.1;
-    let high = oversInNumber;
+    let high = totalBalls;
     let result = null;
 
-    while (high - low > 0.1) {
-      const mid = Math.round(((low + high) / 2) * 10) / 10;
-
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
       const { newPosition, newNRR } = simulateChase(mid);
 
       if (newPosition <= desiredPosition) {
         result = { chaseOvers: mid, newNRR };
-        low = mid + 0.1;
+        low = mid + 1;
       } else {
-        high = mid - 0.1;
+        high = mid - 1;
       }
     }
     return result;
@@ -205,8 +235,8 @@ function calculateChaseOvers(
 
   return {
     type: "chase",
-    minOvers: convertNumberToOvers(minResult.chaseOvers),
-    maxOvers: convertNumberToOvers(maxResult.chaseOvers),
+    minOvers: ballsToOversDisplay(minResult.chaseOvers),
+    maxOvers: ballsToOversDisplay(maxResult.chaseOvers),
     minNRR: parseFloat(minResult.newNRR.toFixed(3)),
     maxNRR: parseFloat(maxResult.newNRR.toFixed(3)),
     runsToChase,
