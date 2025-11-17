@@ -17,7 +17,7 @@ function App() {
     getPointsTable();
   }, []);
   useEffect(() => {
-    if (resultRef.current) {
+    if (resultRef?.current) {
       resultRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [result]);
