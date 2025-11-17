@@ -1,15 +1,24 @@
+
+
 function oversToBalls(overs) {
   if (overs === null || overs === undefined) return 0;
   const s = overs.toString();
+
   if (!s.includes(".")) {
     const full = Number(s);
     return Number.isNaN(full) ? 0 : full * 6;
   }
-  const [wholeStr, decStr] = s.split(".");
+
+  const [wholeStr, decStr = "0"] = s.split(".");
   const whole = parseInt(wholeStr || "0", 10);
 
-  const decNum = parseInt(decStr || "0", 10);
-  if (!Number.isNaN(decNum) && decNum >= 0 && decNum < 6) {
+  const decNum = parseInt(decStr, 10);
+  if (
+    !Number.isNaN(decNum) &&
+    decNum >= 0 &&
+    decNum < 6 &&
+    decStr.length <= 2
+  ) {
     return whole * 6 + decNum;
   }
 
@@ -44,6 +53,7 @@ function convertNumberToOvers(number) {
 }
 
 function calculateNRR(runsFor, oversFor, runsAgainst, oversAgainst) {
+ 
   const ballsFor = oversToBalls(oversFor);
   const ballsAgainst = oversToBalls(oversAgainst);
 
@@ -121,6 +131,7 @@ function calculateChaseOvers(
   }
 
   function simulateChase(chaseBalls) {
+   
     const newRunsFor = teamData.runsFor + runsToChase;
     const newOversForBalls = teamForBalls + chaseBalls;
 
@@ -197,7 +208,6 @@ function calculateChaseOvers(
         low = mid + 1;
       }
     }
-
     return result;
   }
 
@@ -212,7 +222,7 @@ function calculateChaseOvers(
 
       if (newPosition <= desiredPosition) {
         result = { chaseBalls: mid, newNRR };
-        low = mid + 1;
+        low = mid + 1; 
       } else {
         high = mid - 1;
       }
@@ -311,10 +321,9 @@ function calculateRestrictRuns(
       if (t.id === oppData.id) return updatedOpp;
       return t;
     });
-     
+
     const sortedTable = sortTeamsByPosition(updatedTable);
     const newPosition = sortedTable.findIndex((t) => t.id === teamData.id) + 1;
-    console.log('ss',restrictTo ,sortedTable, updatedTeam, updatedOpp);
 
     return { newPosition, newNRR: newNRR };
   }
@@ -361,7 +370,6 @@ function calculateRestrictRuns(
 
   const minResult = findMinRestrict();
   const maxResult = findMaxRestrict();
-  console.log(minResult, maxResult);
 
   if (!minResult || !maxResult) return null;
 
